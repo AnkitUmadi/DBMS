@@ -1,12 +1,19 @@
 // db/tests/phase5_api_tests.js
-// FinShield — Phase 5: End-to-End Full-Stack REST API & Polyglot Integration Tests
-// Verifies all Phase 5 HTTP endpoints, UI hosting, Demo Seeder, Gatekeeper FS001
-// Explainability Modal contract, MongoDB $jsonSchema validation (121), P2P Refund
-// reconciliation, Debt Optimizer (Avalanche vs Snowball), What-If Simulator,
-// and Coach RLS Portal.
+// FinShield — Phase 5: Next.js App Router Full-Stack API & Polyglot E2E Test Suite
+// Boots the compiled Next.js App Router server and verifies:
+//   - React Server Component rendering at GET /
+//   - All 12 Next.js App Router Route Handlers (/api/v1/*)
+//   - Polyglot MongoDB $jsonSchema validation (121), MTD aggregation & Postgres tier sync
+//   - P2P Split / Refund reconciliation & tier recovery
+//   - Gatekeeper FS001 interception, Explainability Modal payload & Audited Override
+//   - Debt Optimizer (Avalanche vs Snowball) priority ranking
+//   - 90-Day Cashflow Forecaster & Non-Destructive What-If Scenario Simulator
+//   - Coach Multi-Tenant RLS Portal (view_high_risk_households & policy_audit_logs)
 
-const { startServer } = require("../../server");
-const { DEMO_IDS } = require("../seed_demo");
+const http = require("http");
+const path = require("path");
+const next = require("next");
+const { DEMO_IDS, pgPool, mongoClient } = require("../../src/lib/db");
 
 const TEST_PORT = 3099;
 const BASE_URL = `http://localhost:${TEST_PORT}`;
@@ -24,8 +31,8 @@ function assert(condition, label, detail = "") {
   }
 }
 
-async function reqJson(path, options = {}) {
-  const res = await fetch(`${BASE_URL}${path}`, {
+async function reqJson(routePath, options = {}) {
+  const res = await fetch(`${BASE_URL}${routePath}`, {
     headers: { "Content-Type": "application/json", ...(options.headers || {}) },
     ...options,
   });
@@ -33,41 +40,51 @@ async function reqJson(path, options = {}) {
   return { status: res.status, body };
 }
 
-async function runPhase5Tests() {
+async function runPhase5NextJsTests() {
   console.log("=================================================================");
-  console.log("FinShield Phase 5 — Full-Stack API & Polyglot E2E Test Suite");
+  console.log("FinShield Phase 5 — Next.js App Router Full-Stack E2E Test Suite");
   console.log("=================================================================");
 
-  const { server, pgPool, mongoClient } = await startServer(TEST_PORT);
+  const app = next({
+    dev: false,
+    dir: path.resolve(__dirname, "../.."),
+  });
+  const handle = app.getRequestHandler();
+  await app.prepare();
+
+  const server = http.createServer((req, res) => handle(req, res));
+  await new Promise((resolve) => server.listen(TEST_PORT, resolve));
 
   try {
-    // 1. Reset Demo Seed via API
+    // 1. Reset Demo Seed via Next.js Route Handler POST /api/v1/seed/reset
     const resetRes = await reqJson("/api/v1/seed/reset", { method: "POST" });
     assert(
       resetRes.status === 200 &&
         resetRes.body.status === "demo_reset_complete" &&
         resetRes.body.summary.length === 4,
-      "5.1 POST /api/v1/seed/reset seeds all 4 demo households across SAFE, CAUTION, CRITICAL, FREEZE"
+      "5.1 Next.js POST /api/v1/seed/reset seeds all 4 demo households across SAFE, CAUTION, CRITICAL, FREEZE"
     );
 
-    // 2. Health Check
+    // 2. Health Check via Next.js Route Handler GET /api/v1/health
     const health = await reqJson("/api/v1/health");
     assert(
       health.status === 200 &&
+        health.body.framework === "Next.js App Router" &&
         health.body.postgres.connected === true &&
         health.body.mongodb.connected === true &&
         health.body.postgres.playbook_count >= 12,
-      "5.2 GET /api/v1/health confirms PostgreSQL 18, MongoDB 8.2, and 12 pgvector playbooks"
+      "5.2 Next.js GET /api/v1/health confirms Next.js App Router, PostgreSQL 18, MongoDB 8.2, and 12 pgvector playbooks"
     );
 
-    // 3. Static Dashboard UI Serving
+    // 3. React Server Component (SSR) Dashboard Rendering at GET /
     const htmlRes = await fetch(`${BASE_URL}/`);
     const htmlText = await htmlRes.text();
     assert(
       htmlRes.status === 200 &&
         htmlText.includes("FinShield") &&
-        htmlText.includes("Explainability"),
-      "5.3 GET / serves the FinShield interactive dashboard HTML"
+        htmlText.includes("Next.js App Router") &&
+        htmlText.includes("Sharma Family"),
+      "5.3 Next.js GET / renders React Server Component with pre-fetched PostgreSQL & MongoDB household data"
     );
 
     // 4. List Households across all 4 tiers
@@ -81,7 +98,7 @@ async function runPhase5Tests() {
         tierMap.get(DEMO_IDS.households.CAUTION) === "CAUTION" &&
         tierMap.get(DEMO_IDS.households.CRITICAL) === "CRITICAL" &&
         tierMap.get(DEMO_IDS.households.FREEZE) === "FREEZE",
-      "5.4 GET /api/v1/households returns all 4 demo households in their exact expected policy tiers"
+      "5.4 Next.js GET /api/v1/households returns all 4 demo households in their exact expected policy tiers"
     );
 
     // 5. Dashboard Payload for SAFE Household (Sharma Family)
@@ -95,7 +112,7 @@ async function runPhase5Tests() {
         safeDash.body.snapshot.discretionary_mtd === 18500 &&
         safeDash.body.playbooks.length === 3 &&
         safeDash.body.playbooks.every((p) => p.trigger_tier === "SAFE"),
-      "5.5 GET /api/v1/dashboard/:id returns synchronized PostgreSQL snapshot, MongoDB MTD (18,500), and 3 SAFE pgvector playbooks"
+      "5.5 Next.js GET /api/v1/dashboard/[householdId] returns synchronized PostgreSQL snapshot, MongoDB MTD (18,500), and 3 SAFE pgvector playbooks"
     );
 
     // 6. Debt Payoff Optimizer: AVALANCHE vs SNOWBALL Priority Flipping on Verma Household (CAUTION)
@@ -113,7 +130,7 @@ async function runPhase5Tests() {
         snRes.body.schedule[0].principal_remaining === 32000 &&
         snRes.body.schedule[0].extra_payment_alloc === 5000 &&
         avRes.body.schedule[0].debt_id !== snRes.body.schedule[0].debt_id,
-      "5.6 GET /api/v1/debt-plan/:id flips Priority #1 between 24% APR Loan (AVALANCHE) and ₹32k Credit Card (SNOWBALL)"
+      "5.6 Next.js GET /api/v1/debt-plan/[householdId] flips Priority #1 between 24% APR Loan (AVALANCHE) and ₹32k Credit Card (SNOWBALL)"
     );
 
     // 7. 90-Day Cashflow Forecaster: SAFE vs FREEZE Deficit Detection
@@ -129,7 +146,7 @@ async function runPhase5Tests() {
         fcSafe.body.deficit_day_count === 0 &&
         fcFreeze.status === 200 &&
         fcFreeze.body.deficit_day_count > 0,
-      "5.7 GET /api/v1/forecast/:id projects 90-day trajectory with 0 deficit days for SAFE and flags deficit days for FREEZE"
+      "5.7 Next.js GET /api/v1/forecast/[householdId] projects 90-day trajectory with 0 deficit days for SAFE and flags deficit days for FREEZE"
     );
 
     // 8. MongoDB $jsonSchema Validation Rejection (MongoError 121 on negative amount)
@@ -145,14 +162,14 @@ async function runPhase5Tests() {
     });
     assert(
       badExp.status === 422 && badExp.body.code === 121,
-      "5.8 POST /api/v1/expenses rejects negative spend with HTTP 422 & MongoError 121 ($jsonSchema validator)"
+      "5.8 Next.js POST /api/v1/expenses rejects negative spend with HTTP 422 & MongoError 121 ($jsonSchema validator)"
     );
 
     // 9. Live Polyglot Spend Escalation: Log ₹45,000 discretionary spend on SAFE household -> Escalates to CAUTION
     const spikeExp = await reqJson("/api/v1/expenses", {
       method: "POST",
       body: JSON.stringify({
-        expense_id: "phase5-test-spike-01",
+        expense_id: "phase5-nextjs-spike-01",
         household_id: DEMO_IDS.households.SAFE,
         user_id: DEMO_IDS.users.sharmaPrimary,
         amount: 45000,
@@ -165,14 +182,14 @@ async function runPhase5Tests() {
         spikeExp.body.snapshot.discretionary_mtd === 63500 &&
         spikeExp.body.snapshot.base_tier === "SAFE" &&
         spikeExp.body.snapshot.current_tier === "CAUTION",
-      "5.9 POST /api/v1/expenses logs ₹45,000 in MongoDB, aggregates ₹63,500 MTD (> ₹60,000 cap), and escalates PostgreSQL tier SAFE -> CAUTION"
+      "5.9 Next.js POST /api/v1/expenses logs ₹45,000 in MongoDB, aggregates ₹63,500 MTD (> ₹60,000 cap), and escalates PostgreSQL tier SAFE -> CAUTION"
     );
 
     // 10. Live P2P Split / Refund Reconciliation: Refund the ₹45,000 expense -> De-escalates CAUTION -> SAFE
     const refundRes = await reqJson("/api/v1/expenses/refund", {
       method: "POST",
       body: JSON.stringify({
-        expense_id: "phase5-test-spike-01",
+        expense_id: "phase5-nextjs-spike-01",
         refund_amount: "FULL",
       }),
     });
@@ -180,7 +197,7 @@ async function runPhase5Tests() {
       refundRes.status === 200 &&
         refundRes.body.snapshot.discretionary_mtd === 18500 &&
         refundRes.body.snapshot.current_tier === "SAFE",
-      "5.10 POST /api/v1/expenses/refund reconciles refund in MongoDB and automatically restores PostgreSQL tier CAUTION -> SAFE"
+      "5.10 Next.js POST /api/v1/expenses/refund reconciles refund in MongoDB and automatically restores PostgreSQL tier CAUTION -> SAFE"
     );
 
     // 11. Gatekeeper FS001 Interception & Explainability Modal Contract on CRITICAL Household
@@ -202,7 +219,7 @@ async function runPhase5Tests() {
         blockedAlloc.body.explainability.recommendation.allowed_equity_max === 0 &&
         Array.isArray(blockedAlloc.body.explainability.why_it_happened) &&
         blockedAlloc.body.explainability.why_it_happened.length > 0,
-      "5.11 POST /api/v1/allocations intercepts 60% equity on CRITICAL household with SQLSTATE FS001 and returns Explainability Modal payload"
+      "5.11 Next.js POST /api/v1/allocations intercepts 60% equity on CRITICAL household with SQLSTATE FS001 and returns Explainability Modal payload"
     );
 
     // 12. Audited Policy Override Workflow (is_override: true + justification reason)
@@ -222,7 +239,7 @@ async function runPhase5Tests() {
       overrideAlloc.status === 201 &&
         overrideAlloc.body.status === "override_accepted_and_audited" &&
         overrideAlloc.body.allocation.is_override === true,
-      "5.12 POST /api/v1/allocations permits explicit override with justification and logs to policy_audit_logs"
+      "5.12 Next.js POST /api/v1/allocations permits explicit override with justification and logs to policy_audit_logs"
     );
 
     // 13. Non-Destructive What-If Scenario Simulator (SAFE -> CRITICAL & SAFE -> FREEZE)
@@ -231,7 +248,7 @@ async function runPhase5Tests() {
       body: JSON.stringify({
         household_id: DEMO_IDS.households.SAFE,
         params: {
-          reserve_delta: -300000, // Drops reserves from 4.2L to 1.2L (2.00 months runway -> CRITICAL)
+          reserve_delta: -300000,
         },
       }),
     });
@@ -240,7 +257,7 @@ async function runPhase5Tests() {
       body: JSON.stringify({
         household_id: DEMO_IDS.households.SAFE,
         params: {
-          drop_primary_earner: true, // Drops income from 1.8L to 60k (0 surplus vs 18.5k MTD spend -> FREEZE)
+          drop_primary_earner: true,
         },
       }),
     });
@@ -255,7 +272,7 @@ async function runPhase5Tests() {
         simFreezeRes.body.simulation.sim_tier === "FREEZE" &&
         checkAfterSim.body.snapshot.current_tier === "SAFE" &&
         checkAfterSim.body.snapshot.total_liquid_reserves === 420000,
-      "5.13 POST /api/v1/simulate computes SAFE -> CRITICAL & SAFE -> FREEZE shock trajectories without mutating live PostgreSQL data"
+      "5.13 Next.js POST /api/v1/simulate computes SAFE -> CRITICAL & SAFE -> FREEZE shock trajectories without mutating live PostgreSQL data"
     );
 
     // 14. Coach & RLS Overview Endpoint (`view_high_risk_households` + `policy_audit_logs`)
@@ -266,7 +283,7 @@ async function runPhase5Tests() {
         coachRes.body.high_risk_cohort.length === 2 &&
         coachRes.body.high_risk_cohort[0].dti_risk_rank === 1 &&
         coachRes.body.audit_logs.length >= 4,
-      "5.14 GET /api/v1/coach/overview executes under COACH RLS context and returns ranked high-risk cohort + audit logs"
+      "5.14 Next.js GET /api/v1/coach/overview executes under COACH RLS context and returns ranked high-risk cohort + audit logs"
     );
 
     // Restore clean initial demo state after tests finish
@@ -274,7 +291,7 @@ async function runPhase5Tests() {
 
     console.log("-----------------------------------------------------------------");
     console.log(
-      `Phase 5 Full-Stack API & E2E Tests Summary: ${passCount} passed, ${failCount} failed`
+      `Phase 5 Next.js App Router E2E Tests Summary: ${passCount} passed, ${failCount} failed`
     );
     console.log("=================================================================");
 
@@ -288,7 +305,7 @@ async function runPhase5Tests() {
   }
 }
 
-runPhase5Tests().catch((err) => {
-  console.error("[FATAL] Phase 5 test runner failed:", err);
+runPhase5NextJsTests().catch((err) => {
+  console.error("[FATAL] Phase 5 Next.js test runner failed:", err);
   process.exit(1);
 });

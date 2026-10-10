@@ -4,8 +4,9 @@
   "description": "FinShield — Deterministic Polyglot Financial Resilience & Debt Mitigation Engine (PostgreSQL + MongoDB + pgvector)",
   "private": true,
   "scripts": {
-    "start": "node server.js",
-    "dev": "node server.js",
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next dev",
     "seed": "node db/seed_demo.js",
     "mongo:init": "node db/mongo/init_mongo.js",
     "test:phase3": "node db/tests/phase3_polyglot_tests.js",
@@ -14,6 +15,9 @@
   "dependencies": {
     "dotenv": "^16.4.5",
     "mongodb": "^6.10.0",
-    "pg": "^8.13.0"
+    "next": "^14.2.15",
+    "pg": "^8.13.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
   }
 }
