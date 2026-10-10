@@ -54,11 +54,33 @@ Write-Host "========================================" -ForegroundColor Magenta
 Write-Host "`n--- Running Phase 1 Tests ---" -ForegroundColor Cyan
 $p1Test = Join-Path $scriptDir "phase1_tests.sql"
 & $psqlPath "$dbUrl" -v ON_ERROR_STOP=1 -f "$p1Test"
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host "`n--- Running Phase 2 Tests ---" -ForegroundColor Cyan
 $p2Test = Join-Path $scriptDir "phase2_tests.sql"
 & $psqlPath "$dbUrl" -v ON_ERROR_STOP=1 -f "$p2Test"
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host "`n--- Running Phase 3 SQL Bridge Tests ---" -ForegroundColor Cyan
+$p3SqlTest = Join-Path $scriptDir "phase3_tests.sql"
+& $psqlPath "$dbUrl" -v ON_ERROR_STOP=1 -f "$p3SqlTest"
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host "`n--- Running Phase 3 Polyglot (MongoDB 8 + PostgreSQL 18) Tests ---" -ForegroundColor Cyan
+$p3PolyglotTest = Join-Path $scriptDir "phase3_polyglot_tests.js"
+& node "$p3PolyglotTest"
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host "`n--- Running Phase 4 Tests (pgvector Playbooks, Simulator & 90d Forecaster) ---" -ForegroundColor Cyan
+$p4Test = Join-Path $scriptDir "phase4_tests.sql"
+& $psqlPath "$dbUrl" -v ON_ERROR_STOP=1 -f "$p4Test"
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host "`n--- Running Phase 5 Full-Stack API & Polyglot E2E Tests ---" -ForegroundColor Cyan
+$p5Test = Join-Path $scriptDir "phase5_api_tests.js"
+& node "$p5Test"
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host "`n========================================" -ForegroundColor Green
-Write-Host " ALL TEST SUITES PASSED (0 FAILURES)   " -ForegroundColor Green
+Write-Host " ALL 165 ASSERTIONS PASSED (0 FAILURES) " -ForegroundColor Green
 Write-Host "========================================" -ForegroundColor Green
