@@ -27,8 +27,8 @@ export async function POST(request) {
       const r = await pgClient.query(
         `SELECT
             household_id,
-            cap_override::float8 AS cap_override,
-            effective_cap::float8 AS effective_cap,
+            $2::float8 AS cap_override,
+            discretionary_cap::float8 AS effective_cap,
             structural_surplus::float8 AS structural_surplus,
             discretionary_mtd::float8 AS discretionary_mtd,
             current_tier,
