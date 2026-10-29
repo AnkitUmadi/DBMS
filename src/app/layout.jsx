@@ -26,17 +26,21 @@ export default function RootLayout({ children }) {
           rel="stylesheet"
         />
         <script src="https://cdn.tailwindcss.com"></script>
-        <style>{`
-          body {
-            font-family: 'Inter', system-ui, -apple-system, sans-serif;
-            background-color: #F8FAFC;
-            color: #0F172A;
-          }
-          .mono-num {
-            font-family: 'JetBrains Mono', monospace;
-            font-variant-numeric: tabular-nums;
-          }
-        `}</style>
+        <style
+          dangerouslySetInnerHTML={{
+            __html: `
+              body {
+                font-family: 'Inter', system-ui, -apple-system, sans-serif;
+                background-color: #F8FAFC;
+                color: #0F172A;
+              }
+              .mono-num {
+                font-family: 'JetBrains Mono', monospace;
+                font-variant-numeric: tabular-nums;
+              }
+            `,
+          }}
+        />
       </head>
       <body className="min-h-screen flex flex-col bg-slate-50 text-slate-900">
         {children}
