@@ -193,205 +193,6 @@ function CashflowTrajectoryChart({ series = [], deficitCount = 0 }) {
         })}
       </svg>
 
-      {/* 5. REGISTER NEW HOUSEHOLD & USER MODAL */}
-      {showNewHouseholdModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl max-w-lg w-full border border-slate-200 shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
-            <div className="bg-slate-900 px-6 py-4 flex items-center justify-between text-white flex-shrink-0">
-              <div>
-                <h3 className="text-base font-bold flex items-center gap-2">
-                  <span className="p-1 rounded bg-[#6366F1]/20 text-[#6366F1]">🏠</span>
-                  Register New Household &amp; User
-                </h3>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  Creates new entities in PostgreSQL under a single ACID transaction
-                </p>
-              </div>
-              <button
-                onClick={() => setShowNewHouseholdModal(false)}
-                className="text-slate-400 hover:text-white p-1 rounded-lg text-lg leading-none"
-              >
-                &times;
-              </button>
-            </div>
-
-            <form onSubmit={handleCreateNewHousehold} className="p-6 space-y-3.5 text-xs overflow-y-auto">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">
-                    Household Name *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Gupta Family"
-                    value={newHhForm.household_name}
-                    onChange={(e) => setNewHhForm({ ...newHhForm, household_name: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white"
-                  />
-                </div>
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">
-                    Primary User Name *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Rohan Gupta"
-                    value={newHhForm.full_name}
-                    onChange={(e) => setNewHhForm({ ...newHhForm, full_name: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">
-                  User Email *
-                </label>
-                <input
-                  type="email"
-                  required
-                  placeholder="e.g. rohan.gupta@pes.edu"
-                  value={newHhForm.email}
-                  onChange={(e) => setNewHhForm({ ...newHhForm, email: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white"
-                />
-              </div>
-
-              <div className="grid grid-cols-3 gap-2">
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1 text-[11px]">
-                    Monthly Income (₹) *
-                  </label>
-                  <input
-                    type="number"
-                    required
-                    min="1000"
-                    placeholder="85000"
-                    value={newHhForm.monthly_salary}
-                    onChange={(e) => setNewHhForm({ ...newHhForm, monthly_salary: e.target.value })}
-                    className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs bg-white mono-num font-bold text-emerald-700"
-                  />
-                </div>
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1 text-[11px]">
-                    Emergency Reserves (₹) *
-                  </label>
-                  <input
-                    type="number"
-                    required
-                    min="0"
-                    placeholder="300000"
-                    value={newHhForm.liquid_emergency_fund}
-                    onChange={(e) => setNewHhForm({ ...newHhForm, liquid_emergency_fund: e.target.value })}
-                    className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs bg-white mono-num font-bold text-indigo-700"
-                  />
-                </div>
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1 text-[11px]">
-                    Living Costs (₹/mo) *
-                  </label>
-                  <input
-                    type="number"
-                    required
-                    min="0"
-                    placeholder="35000"
-                    value={newHhForm.monthly_living_costs}
-                    onChange={(e) => setNewHhForm({ ...newHhForm, monthly_living_costs: e.target.value })}
-                    className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs bg-white mono-num"
-                  />
-                </div>
-              </div>
-
-              {/* Optional Initial Debt checkbox */}
-              <div className="pt-2 border-t border-slate-200">
-                <label className="flex items-center gap-2 cursor-pointer font-bold text-slate-800">
-                  <input
-                    type="checkbox"
-                    checked={newHhForm.has_initial_debt}
-                    onChange={(e) => setNewHhForm({ ...newHhForm, has_initial_debt: e.target.checked })}
-                    className="rounded border-slate-300 text-rose-600 focus:ring-rose-500"
-                  />
-                  <span>Add an Initial Loan / Debt Liability to this Household</span>
-                </label>
-              </div>
-
-              {newHhForm.has_initial_debt && (
-                <div className="p-3 bg-rose-50/70 rounded-xl border border-rose-200 space-y-2.5 animate-in fade-in">
-                  <div>
-                    <label className="font-bold text-slate-700 block mb-1 text-[11px]">
-                      Debt Lender Name
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="e.g. ICICI Credit Card"
-                      value={newHhForm.initial_debt_name}
-                      onChange={(e) => setNewHhForm({ ...newHhForm, initial_debt_name: e.target.value })}
-                      className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs bg-white"
-                    />
-                  </div>
-                  <div className="grid grid-cols-3 gap-2">
-                    <div>
-                      <label className="font-bold text-slate-700 block mb-1 text-[11px]">
-                        Principal (₹)
-                      </label>
-                      <input
-                        type="number"
-                        placeholder="50000"
-                        value={newHhForm.initial_debt_principal}
-                        onChange={(e) => setNewHhForm({ ...newHhForm, initial_debt_principal: e.target.value })}
-                        className="w-full px-2 py-1.5 border border-slate-300 rounded-lg text-xs bg-white mono-num"
-                      />
-                    </div>
-                    <div>
-                      <label className="font-bold text-slate-700 block mb-1 text-[11px]">
-                        APR (%)
-                      </label>
-                      <input
-                        type="number"
-                        placeholder="24.0"
-                        value={newHhForm.initial_debt_apr}
-                        onChange={(e) => setNewHhForm({ ...newHhForm, initial_debt_apr: e.target.value })}
-                        className="w-full px-2 py-1.5 border border-slate-300 rounded-lg text-xs bg-white mono-num font-bold text-rose-600"
-                      />
-                    </div>
-                    <div>
-                      <label className="font-bold text-slate-700 block mb-1 text-[11px]">
-                        EMI (₹)
-                      </label>
-                      <input
-                        type="number"
-                        placeholder="5000"
-                        value={newHhForm.initial_debt_emi}
-                        onChange={(e) => setNewHhForm({ ...newHhForm, initial_debt_emi: e.target.value })}
-                        className="w-full px-2 py-1.5 border border-slate-300 rounded-lg text-xs bg-white mono-num"
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              <div className="pt-3 border-t border-slate-200 flex items-center justify-end gap-2 flex-shrink-0">
-                <button
-                  type="button"
-                  onClick={() => setShowNewHouseholdModal(false)}
-                  className="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 font-bold hover:bg-slate-100 transition"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={newHhLoading}
-                  className="px-5 py-2 rounded-lg bg-[#6366F1] hover:bg-indigo-600 text-white font-extrabold shadow-md transition disabled:opacity-50"
-                >
-                  {newHhLoading ? "Creating in PostgreSQL..." : "Create Household & Initialize"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -1101,14 +902,16 @@ export default function FinShieldDashboardClient({
                   </option>
                 ))}
               </select>
-              <button
-                type="button"
-                onClick={() => setShowNewHouseholdModal(true)}
-                className="ml-2 px-2.5 py-1 rounded bg-[#6366F1] hover:bg-indigo-500 text-white text-[11px] font-bold shadow-sm transition whitespace-nowrap"
-                title="Register a completely new Household & User"
-              >
-                + New Household
-              </button>
+              {viewMode === "COACH" && (
+                <button
+                  type="button"
+                  onClick={() => setShowNewHouseholdModal(true)}
+                  className="ml-2 px-2.5 py-1 rounded-md bg-[#6366F1] hover:bg-indigo-500 text-white text-[11px] font-bold shadow-sm transition whitespace-nowrap"
+                  title="Coach Onboarding: Register a completely new Household & User"
+                >
+                  + New Household (Coach)
+                </button>
+              )}
             </div>
 
             <div
@@ -2676,6 +2479,207 @@ export default function FinShieldDashboardClient({
           </div>
         </div>
       )}
+
+      {/* 5. REGISTER NEW HOUSEHOLD & USER MODAL */}
+      {showNewHouseholdModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl max-w-lg w-full border border-slate-200 shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
+            <div className="bg-slate-900 px-6 py-4 flex items-center justify-between text-white flex-shrink-0">
+              <div>
+                <h3 className="text-base font-bold flex items-center gap-2">
+                  <span className="p-1 rounded bg-[#6366F1]/20 text-[#6366F1]">🏠</span>
+                  Register New Household &amp; User
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Creates new entities in PostgreSQL under a single ACID transaction
+                </p>
+              </div>
+              <button
+                onClick={() => setShowNewHouseholdModal(false)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg text-lg leading-none"
+              >
+                &times;
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateNewHousehold} className="p-6 space-y-3.5 text-xs overflow-y-auto">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">
+                    Household Name *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Gupta Family"
+                    value={newHhForm.household_name}
+                    onChange={(e) => setNewHhForm({ ...newHhForm, household_name: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">
+                    Primary User Name *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Rohan Gupta"
+                    value={newHhForm.full_name}
+                    onChange={(e) => setNewHhForm({ ...newHhForm, full_name: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">
+                  User Email *
+                </label>
+                <input
+                  type="email"
+                  required
+                  placeholder="e.g. rohan.gupta@pes.edu"
+                  value={newHhForm.email}
+                  onChange={(e) => setNewHhForm({ ...newHhForm, email: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white"
+                />
+              </div>
+
+              <div className="grid grid-cols-3 gap-2">
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1 text-[11px]">
+                    Monthly Income (₹) *
+                  </label>
+                  <input
+                    type="number"
+                    required
+                    min="1000"
+                    placeholder="85000"
+                    value={newHhForm.monthly_salary}
+                    onChange={(e) => setNewHhForm({ ...newHhForm, monthly_salary: e.target.value })}
+                    className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs bg-white mono-num font-bold text-emerald-700"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1 text-[11px]">
+                    Emergency Reserves (₹) *
+                  </label>
+                  <input
+                    type="number"
+                    required
+                    min="0"
+                    placeholder="300000"
+                    value={newHhForm.liquid_emergency_fund}
+                    onChange={(e) => setNewHhForm({ ...newHhForm, liquid_emergency_fund: e.target.value })}
+                    className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs bg-white mono-num font-bold text-indigo-700"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1 text-[11px]">
+                    Living Costs (₹/mo) *
+                  </label>
+                  <input
+                    type="number"
+                    required
+                    min="0"
+                    placeholder="35000"
+                    value={newHhForm.monthly_living_costs}
+                    onChange={(e) => setNewHhForm({ ...newHhForm, monthly_living_costs: e.target.value })}
+                    className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs bg-white mono-num"
+                  />
+                </div>
+              </div>
+
+              {/* Optional Initial Debt checkbox */}
+              <div className="pt-2 border-t border-slate-200">
+                <label className="flex items-center gap-2 cursor-pointer font-bold text-slate-800">
+                  <input
+                    type="checkbox"
+                    checked={newHhForm.has_initial_debt}
+                    onChange={(e) => setNewHhForm({ ...newHhForm, has_initial_debt: e.target.checked })}
+                    className="rounded border-slate-300 text-rose-600 focus:ring-rose-500"
+                  />
+                  <span>Add an Initial Loan / Debt Liability to this Household</span>
+                </label>
+              </div>
+
+              {newHhForm.has_initial_debt && (
+                <div className="p-3 bg-rose-50/70 rounded-xl border border-rose-200 space-y-2.5 animate-in fade-in">
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1 text-[11px]">
+                      Debt Lender Name
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. ICICI Credit Card"
+                      value={newHhForm.initial_debt_name}
+                      onChange={(e) => setNewHhForm({ ...newHhForm, initial_debt_name: e.target.value })}
+                      className="w-full px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs bg-white"
+                    />
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div>
+                      <label className="font-bold text-slate-700 block mb-1 text-[11px]">
+                        Principal (₹)
+                      </label>
+                      <input
+                        type="number"
+                        placeholder="50000"
+                        value={newHhForm.initial_debt_principal}
+                        onChange={(e) => setNewHhForm({ ...newHhForm, initial_debt_principal: e.target.value })}
+                        className="w-full px-2 py-1.5 border border-slate-300 rounded-lg text-xs bg-white mono-num"
+                      />
+                    </div>
+                    <div>
+                      <label className="font-bold text-slate-700 block mb-1 text-[11px]">
+                        APR (%)
+                      </label>
+                      <input
+                        type="number"
+                        placeholder="24.0"
+                        value={newHhForm.initial_debt_apr}
+                        onChange={(e) => setNewHhForm({ ...newHhForm, initial_debt_apr: e.target.value })}
+                        className="w-full px-2 py-1.5 border border-slate-300 rounded-lg text-xs bg-white mono-num font-bold text-rose-600"
+                      />
+                    </div>
+                    <div>
+                      <label className="font-bold text-slate-700 block mb-1 text-[11px]">
+                        EMI (₹)
+                      </label>
+                      <input
+                        type="number"
+                        placeholder="5000"
+                        value={newHhForm.initial_debt_emi}
+                        onChange={(e) => setNewHhForm({ ...newHhForm, initial_debt_emi: e.target.value })}
+                        className="w-full px-2 py-1.5 border border-slate-300 rounded-lg text-xs bg-white mono-num"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="pt-3 border-t border-slate-200 flex items-center justify-end gap-2 flex-shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setShowNewHouseholdModal(false)}
+                  className="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 font-bold hover:bg-slate-100 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={newHhLoading}
+                  className="px-5 py-2 rounded-lg bg-[#6366F1] hover:bg-indigo-600 text-white font-extrabold shadow-md transition disabled:opacity-50"
+                >
+                  {newHhLoading ? "Creating in PostgreSQL..." : "Create Household & Initialize"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
