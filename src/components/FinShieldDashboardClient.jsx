@@ -322,6 +322,23 @@ export default function FinShieldDashboardClient({
   // Coach Overview State
   const [coachData, setCoachData] = useState(null);
 
+  // Financial Entry State (Add Debt / Add Income / Add Asset)
+  const [showAddEntryModal, setShowAddEntryModal] = useState(false);
+  const [entryType, setEntryType] = useState("LIABILITY"); // 'LIABILITY' | 'INCOME' | 'ASSET'
+  const [entryForm, setEntryForm] = useState({
+    lender_name: "",
+    principal_remaining: "",
+    annual_interest_rate: "",
+    monthly_emi: "",
+    due_day: "10",
+    source_name: "",
+    monthly_amount: "",
+    pay_day: "1",
+    asset_name: "",
+    current_balance: "",
+  });
+  const [entryLoading, setEntryLoading] = useState(false);
+
   const notify = useCallback((title, message, type = "info") => {
     setToast({ title, message, type });
     setTimeout(() => {
@@ -640,6 +657,82 @@ export default function FinShieldDashboardClient({
     }
   };
 
+  const handleAddFinancialEntry = async (e) => {
+    e.preventDefault();
+    setEntryLoading(true);
+    try {
+      let payload = {};
+      if (entryType === "LIABILITY") {
+        if (!entryForm.lender_name || !entryForm.principal_remaining || !entryForm.annual_interest_rate || !entryForm.monthly_emi) {
+          throw new Error("Please fill in all loan fields: lender name, principal, APR %, and EMI.");
+        }
+        payload = {
+          lender_name: entryForm.lender_name,
+          principal_remaining: Number(entryForm.principal_remaining),
+          annual_interest_rate: Number(entryForm.annual_interest_rate),
+          monthly_emi: Number(entryForm.monthly_emi),
+          due_day: Number(entryForm.due_day || 10),
+        };
+      } else if (entryType === "INCOME") {
+        if (!entryForm.source_name || !entryForm.monthly_amount) {
+          throw new Error("Please enter income source name and monthly amount.");
+        }
+        payload = {
+          source_name: entryForm.source_name,
+          monthly_amount: Number(entryForm.monthly_amount),
+          pay_day: Number(entryForm.pay_day || 1),
+        };
+      } else if (entryType === "ASSET") {
+        if (!entryForm.asset_name || !entryForm.current_balance) {
+          throw new Error("Please enter asset name and balance.");
+        }
+        payload = {
+          asset_name: entryForm.asset_name,
+          current_balance: Number(entryForm.current_balance),
+          is_emergency_fund: true,
+        };
+      }
+
+      const res = await fetch("/api/v1/financial-entry", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          household_id: activeHouseholdId,
+          entry_type: entryType,
+          payload,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      notify(
+        "PostgreSQL Trigger Executed",
+        `${entryType} added! Database trigger trg_snap_${entryType.toLowerCase()} recalculated snapshot. New Tier: ${data.updated_snapshot.current_tier}`,
+        "success"
+      );
+      setShowAddEntryModal(false);
+      setEntryForm({
+        lender_name: "",
+        principal_remaining: "",
+        annual_interest_rate: "",
+        monthly_emi: "",
+        due_day: "10",
+        source_name: "",
+        monthly_amount: "",
+        pay_day: "1",
+        asset_name: "",
+        current_balance: "",
+      });
+      await refreshHouseholdAndList(activeHouseholdId);
+      if (viewMode === "COACH") await loadCoachPortal();
+    } catch (err) {
+      notify("Failed to Add Financial Entry", err.message, "error");
+    } finally {
+      setEntryLoading(false);
+    }
+  };
+
   const snap = dashboard?.snapshot || {};
   const activeTier = snap.current_tier || "SAFE";
   const tStyle = TIER_STYLES[activeTier] || TIER_STYLES.FREEZE;
@@ -770,6 +863,16 @@ export default function FinShieldDashboardClient({
               className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition"
             >
               Reset Demo
+            </button>
+
+            <button
+              onClick={() => {
+                setEntryType("LIABILITY");
+                setShowAddEntryModal(true);
+              }}
+              className="px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm transition flex items-center gap-1"
+            >
+              <span className="text-sm leading-none">+</span> Add Debt / Income
             </button>
           </div>
         </div>
@@ -1114,9 +1217,20 @@ export default function FinShieldDashboardClient({
               <div>
                 <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-100">
                   <div>
-                    <h2 className="text-base font-bold text-slate-900">
-                      Debt Payoff Optimizer
-                    </h2>
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-base font-bold text-slate-900">
+                        Debt Payoff Optimizer
+                      </h2>
+                      <button
+                        onClick={() => {
+                          setEntryType("LIABILITY");
+                          setShowAddEntryModal(true);
+                        }}
+                        className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition"
+                      >
+                        + Add Debt
+                      </button>
+                    </div>
                     <p className="text-xs text-slate-500">
                       PostgreSQL <code className="font-mono">sp_generate_debt_plan</code>
                     </p>
@@ -1994,6 +2108,258 @@ export default function FinShieldDashboardClient({
                 [ Accept Safety Recommendation ]
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* 4. FINANCIAL ONBOARDING & ENTRY MODAL (Incomes, Debts, Assets) */}
+      {showAddEntryModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl max-w-lg w-full border border-slate-200 shadow-2xl overflow-hidden">
+            {/* Modal Header */}
+            <div className="bg-slate-900 px-6 py-4 flex items-center justify-between text-white">
+              <div>
+                <h3 className="text-base font-bold flex items-center gap-2">
+                  <span className="p-1 rounded bg-emerald-500/20 text-emerald-400">⚡</span>
+                  Add Financial Foundation Record
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Direct insert into PostgreSQL with automatic <code className="text-emerald-400 font-mono">fn_refresh_snapshot</code> trigger execution
+                </p>
+              </div>
+              <button
+                onClick={() => setShowAddEntryModal(false)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg text-lg leading-none"
+              >
+                &times;
+              </button>
+            </div>
+
+            {/* Type Switcher Tabs */}
+            <div className="flex border-b border-slate-200 bg-slate-50 p-2 gap-1.5 text-xs font-bold">
+              <button
+                type="button"
+                onClick={() => setEntryType("LIABILITY")}
+                className={`flex-1 py-2 rounded-lg transition ${
+                  entryType === "LIABILITY"
+                    ? "bg-rose-600 text-white shadow-sm"
+                    : "text-slate-600 hover:bg-slate-200"
+                }`}
+              >
+                💳 Liability / Loan (Debt)
+              </button>
+              <button
+                type="button"
+                onClick={() => setEntryType("INCOME")}
+                className={`flex-1 py-2 rounded-lg transition ${
+                  entryType === "INCOME"
+                    ? "bg-emerald-600 text-white shadow-sm"
+                    : "text-slate-600 hover:bg-slate-200"
+                }`}
+              >
+                💰 Income Stream
+              </button>
+              <button
+                type="button"
+                onClick={() => setEntryType("ASSET")}
+                className={`flex-1 py-2 rounded-lg transition ${
+                  entryType === "ASSET"
+                    ? "bg-indigo-600 text-white shadow-sm"
+                    : "text-slate-600 hover:bg-slate-200"
+                }`}
+              >
+                🏦 Liquid Reserve Asset
+              </button>
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleAddFinancialEntry} className="p-6 space-y-4 text-xs">
+              {entryType === "LIABILITY" && (
+                <>
+                  <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-[11px] font-medium leading-relaxed">
+                    Inserting a high-APR loan (≥ 18%) will dynamically trip the <strong>`FS001` Fiduciary Gatekeeper</strong>, locking speculative equity allocations to 0%.
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">
+                      Lender / Debt Name *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Axis Bank Platinum Credit Card"
+                      value={entryForm.lender_name}
+                      onChange={(e) => setEntryForm({ ...entryForm, lender_name: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="font-bold text-slate-700 block mb-1">
+                        Principal Remaining (₹) *
+                      </label>
+                      <input
+                        type="number"
+                        required
+                        min="1"
+                        placeholder="e.g. 75000"
+                        value={entryForm.principal_remaining}
+                        onChange={(e) => setEntryForm({ ...entryForm, principal_remaining: e.target.value })}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white mono-num"
+                      />
+                    </div>
+                    <div>
+                      <label className="font-bold text-slate-700 block mb-1">
+                        Annual APR (%) *
+                      </label>
+                      <input
+                        type="number"
+                        required
+                        step="0.1"
+                        min="0"
+                        max="100"
+                        placeholder="e.g. 36.0"
+                        value={entryForm.annual_interest_rate}
+                        onChange={(e) => setEntryForm({ ...entryForm, annual_interest_rate: e.target.value })}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white mono-num font-bold text-rose-600"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="font-bold text-slate-700 block mb-1">
+                        Monthly EMI (₹) *
+                      </label>
+                      <input
+                        type="number"
+                        required
+                        min="1"
+                        placeholder="e.g. 6500"
+                        value={entryForm.monthly_emi}
+                        onChange={(e) => setEntryForm({ ...entryForm, monthly_emi: e.target.value })}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white mono-num"
+                      />
+                    </div>
+                    <div>
+                      <label className="font-bold text-slate-700 block mb-1">
+                        EMI Due Day (1-31)
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="31"
+                        placeholder="10"
+                        value={entryForm.due_day}
+                        onChange={(e) => setEntryForm({ ...entryForm, due_day: e.target.value })}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white mono-num"
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {entryType === "INCOME" && (
+                <>
+                  <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] font-medium leading-relaxed">
+                    Adding recurring monthly income raises structural surplus and lowers the Debt-to-Income (DTI) ratio.
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">
+                      Income Source Name *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Tech Consulting Retainer / Spouse Salary"
+                      value={entryForm.source_name}
+                      onChange={(e) => setEntryForm({ ...entryForm, source_name: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="font-bold text-slate-700 block mb-1">
+                        Monthly Net Take-Home (₹) *
+                      </label>
+                      <input
+                        type="number"
+                        required
+                        min="1"
+                        placeholder="e.g. 50000"
+                        value={entryForm.monthly_amount}
+                        onChange={(e) => setEntryForm({ ...entryForm, monthly_amount: e.target.value })}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white mono-num font-bold text-emerald-700"
+                      />
+                    </div>
+                    <div>
+                      <label className="font-bold text-slate-700 block mb-1">
+                        Pay Day of Month (1-31)
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="31"
+                        placeholder="1"
+                        value={entryForm.pay_day}
+                        onChange={(e) => setEntryForm({ ...entryForm, pay_day: e.target.value })}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white mono-num"
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {entryType === "ASSET" && (
+                <>
+                  <div className="p-3 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-800 text-[11px] font-medium leading-relaxed">
+                    Liquid emergency funds directly extend the household's <strong>Survival Runway Months</strong>.
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">
+                      Asset / Reserve Name *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. ICICI Emergency Fixed Deposit / Liquid Mutual Fund"
+                      value={entryForm.asset_name}
+                      onChange={(e) => setEntryForm({ ...entryForm, asset_name: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">
+                      Current Liquid Balance (₹) *
+                    </label>
+                    <input
+                      type="number"
+                      required
+                      min="1"
+                      placeholder="e.g. 150000"
+                      value={entryForm.current_balance}
+                      onChange={(e) => setEntryForm({ ...entryForm, current_balance: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white mono-num font-bold text-indigo-700"
+                    />
+                  </div>
+                </>
+              )}
+
+              <div className="pt-3 border-t border-slate-200 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowAddEntryModal(false)}
+                  className="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 font-bold hover:bg-slate-100 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={entryLoading}
+                  className="px-5 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-extrabold shadow-md transition disabled:opacity-50"
+                >
+                  {entryLoading ? "Executing SQL Trigger..." : "Insert & Trigger Snapshot"}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
