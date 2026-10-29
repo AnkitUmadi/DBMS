@@ -226,7 +226,6 @@ async function getHouseholdsList(rlsContext = null) {
           ) AS primary_user
        FROM households h
        JOIN financial_snapshots fs ON fs.household_id = h.household_id
-       WHERE h.household_id = ANY($1::uuid[])
        ORDER BY
          CASE fs.current_tier
            WHEN 'SAFE' THEN 1
@@ -234,8 +233,7 @@ async function getHouseholdsList(rlsContext = null) {
            WHEN 'CRITICAL' THEN 3
            WHEN 'FREEZE' THEN 4
          END ASC,
-         h.household_name ASC`,
-      [Object.values(DEMO_IDS.households)]
+         h.created_at DESC`
     );
     return {
       households: hRes.rows,
