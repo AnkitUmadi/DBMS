@@ -871,8 +871,7 @@ export default function FinShieldDashboardClient({
                 </span>
               </div>
               <p className="text-xs text-slate-400 hidden sm:block">
-                PostgreSQL 18 (ACID + Triggers + RLS) &bull; MongoDB 8.2 (Spend
-                Docs) &bull; pgvector (&lt;=&gt; Playbooks)
+                Financial safety, clearly in view
               </p>
             </div>
           </div>
@@ -1005,12 +1004,29 @@ export default function FinShieldDashboardClient({
       {/* ================================================================= */}
       {viewMode === "USER" ? (
         <main className="flex-1 max-w-[1440px] w-full mx-auto px-4 sm:px-6 py-6 space-y-6">
+          <section className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#6366F1]">
+                Household overview
+              </p>
+              <h1 className="mt-1 text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900">
+                Your financial health
+              </h1>
+              <p className="mt-1 text-sm text-slate-500">
+                A clear picture of your resilience, commitments, and next steps.
+              </p>
+            </div>
+            <div className="inline-flex items-center gap-2 self-start sm:self-auto rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-sm">
+              <span className={`h-2 w-2 rounded-full ${tStyle.dot}`} />
+              {activeTier.charAt(0) + activeTier.slice(1).toLowerCase()} safety tier
+            </div>
+          </section>
           {/* ------------------------------------------------------------- */}
           {/* TOP METRIC STRIP (4 CARDS)                                    */}
           {/* ------------------------------------------------------------- */}
           <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Card 1: Emergency Runway Gauge */}
-            <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm flex flex-col justify-between">
+            <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm flex flex-col justify-between transition duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md">
               <div>
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
@@ -1057,7 +1073,7 @@ export default function FinShieldDashboardClient({
             </div>
 
             {/* Card 2: Debt-to-Income (DTI) Meter */}
-            <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm flex flex-col justify-between">
+            <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm flex flex-col justify-between transition duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md">
               <div>
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
@@ -1104,7 +1120,7 @@ export default function FinShieldDashboardClient({
             </div>
 
             {/* Card 3: Monthly Net Surplus & MongoDB Spend Guardrail */}
-            <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm flex flex-col justify-between">
+            <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm flex flex-col justify-between transition duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md">
               <div>
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
@@ -1163,7 +1179,7 @@ export default function FinShieldDashboardClient({
             </div>
 
             {/* Card 4: Expense Rigidity Index */}
-            <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm flex flex-col justify-between">
+            <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm flex flex-col justify-between transition duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md">
               <div>
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
